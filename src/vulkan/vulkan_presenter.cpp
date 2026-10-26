@@ -295,14 +295,39 @@ namespace dxvk::vk {
 
         if ((status = m_vkd->vkCreateSwapchainKHR(m_vkd->device(), &swapInfo, nullptr, &m_swapchain)) != VK_SUCCESS) {
           Logger::err(str::format("Presenter: vkCreateSwapchainKHR failed again, error code: ", status, ". Giving up."));
-
-          return status;
         }
       }
       else {
         Logger::err(errString);
-        return status;
       }
+
+      // NV-DXVK start: [fork-amd] TODO-FORK #0 - workaround AMD VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+      // The AMD Vulkan driver rejects the new swap chain while the previous one has not
+      // been fully retired. Do a hard teardown (device wait idle + destroy the old swap
+      // chain) and retry one last time without oldSwapchain, before giving up.
+      if (status == VK_ERROR_NATIVE_WINDOW_IN_USE_KHR) {
+        Logger::warn("Presenter: [fork-amd] NATIVE_WINDOW_IN_USE - hard teardown, then retry");
+
+        m_vkd->vkDeviceWaitIdle(m_vkd->device());
+
+        if (m_swapchain != VK_NULL_HANDLE) {
+          m_vkd->vkDestroySwapchainKHR(m_vkd->device(), m_swapchain, nullptr);
+          m_swapchain = VK_NULL_HANDLE;
+        }
+
+        swapInfo.oldSwapchain = VK_NULL_HANDLE;
+        swapInfo.pNext = nullptr;
+
+        status = m_vkd->vkCreateSwapchainKHR(m_vkd->device(), &swapInfo, nullptr, &m_swapchain);
+
+        if (status != VK_SUCCESS) {
+          Logger::err(str::format("Presenter: [fork-amd] vkCreateSwapchainKHR still failing after teardown, error code: ", status, ". Giving up."));
+        }
+      }
+      // NV-DXVK end
+
+      if (status != VK_SUCCESS)
+        return status;
     }
 
     // NV-DXVK start: App Controlled FSE
