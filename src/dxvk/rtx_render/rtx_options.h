@@ -343,7 +343,7 @@ namespace dxvk {
     // Fork AMD start: FSR 3 + Anti-Lag
     RTX_OPTION_ARGS("rtx", FsrPreset, fsrPreset, FsrPreset::Balanced, "Adjusts FSR 3 scaling factor, trades quality for performance.",
                     args.flags = RtxOptionFlags::UserSetting);
-    RTX_OPTION("rtx", bool, amdAntiLagEnable, false, "Enables AMD Anti-Lag (VK_AMD_anti_lag) to reduce input latency on Radeon GPUs. Requires a recent AMD driver.",
+    RTX_OPTION_ARGS("rtx", bool, amdAntiLagEnable, false, "Enables AMD Anti-Lag (VK_AMD_anti_lag) to reduce input latency on Radeon GPUs. Requires a recent AMD driver.",
                     args.flags = RtxOptionFlags::UserSetting);
     // Fork AMD end
     static void graphicsPresetOnChange(DxvkDevice* device);

@@ -661,14 +661,14 @@ namespace dxvk {
         static PFN_vkCmdSetAntiLagDataAMD s_vkCmdSetAntiLagDataAMD = nullptr;
         if (!s_vkCmdSetAntiLagDataAMD) {
           s_vkCmdSetAntiLagDataAMD = reinterpret_cast<PFN_vkCmdSetAntiLagDataAMD>(
-            vkGetDeviceProcAddr(m_device->handle(), "vkCmdSetAntiLagDataAMD"));
+            m_device->vkd()->sym("vkCmdSetAntiLagDataAMD"));
         }
-        if (s_vkCmdSetAntiLagDataAMD && m_cmd != nullptr) {
+        if (s_vkCmdSetAntiLagDataAMD) {
           VkAntiLagDataAMD antiLagData {};
           antiLagData.sType = VK_STRUCTURE_TYPE_ANTI_LAG_DATA_AMD;
           antiLagData.mode = VK_ANTI_LAG_MODE_ON_AMD;
           antiLagData.inFrameMarker = VK_TRUE; // marqueur entrée de frame
-          s_vkCmdSetAntiLagDataAMD(m_cmd->handle(), &antiLagData);
+          s_vkCmdSetAntiLagDataAMD(getCmdBuffer(DxvkCmdBuffer::ExecBuffer), &antiLagData);
         }
       }
       // Fork AMD end
