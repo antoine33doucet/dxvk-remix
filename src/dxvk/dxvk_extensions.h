@@ -364,6 +364,10 @@ namespace dxvk {
     // NV-DXVK start:
     DxvkExt extShaderAtomicFloat              = { VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,                DxvkExtMode::Optional };
     // NV-DXVK end
+
+    // Fork AMD start: Anti-Lag (marqueurs de latence VK_AMD_anti_lag)
+    DxvkExt extAntiLagAmd                     = { "VK_AMD_anti_lag",                                         DxvkExtMode::Optional };
+    // Fork AMD end
   };
   
   /**

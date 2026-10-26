@@ -71,6 +71,9 @@
 #include <nvapi.h>
 
 #include <NvLowLatencyVk.h>
+// Fork AMD start: interface VK_AMD_anti_lag (Anti-Lag)
+#include "amd_anti_lag_vk.h"
+// Fork AMD end
 #include <pclstats.h>
 
 #include "rtx_matrix_helpers.h"
@@ -649,6 +652,26 @@ namespace dxvk {
 
       // Note: Update the Reflex mode in case the option has changed.
       reflex.updateMode();
+
+      // Fork AMD start: AMD Anti-Lag (VK_AMD_anti_lag)
+      // Envoie le marqueur de début de frame au driver Radeon si l'option
+      // rtx.amdAntiLagEnable est activée (ex: rtx.conf ou l'UI Remix).
+      // Inerte sur GPU NVIDIA / pilotes sans l'extension.
+      if (RtxOptions::amdAntiLagEnable() && m_device->extensions().extAntiLagAmd) {
+        static PFN_vkCmdSetAntiLagDataAMD s_vkCmdSetAntiLagDataAMD = nullptr;
+        if (!s_vkCmdSetAntiLagDataAMD) {
+          s_vkCmdSetAntiLagDataAMD = reinterpret_cast<PFN_vkCmdSetAntiLagDataAMD>(
+            vkGetDeviceProcAddr(m_device->handle(), "vkCmdSetAntiLagDataAMD"));
+        }
+        if (s_vkCmdSetAntiLagDataAMD && m_cmd != nullptr) {
+          VkAntiLagDataAMD antiLagData {};
+          antiLagData.sType = VK_STRUCTURE_TYPE_ANTI_LAG_DATA_AMD;
+          antiLagData.mode = VK_ANTI_LAG_MODE_ON_AMD;
+          antiLagData.inFrameMarker = VK_TRUE; // marqueur entrée de frame
+          s_vkCmdSetAntiLagDataAMD(m_cmd->handle(), &antiLagData);
+        }
+      }
+      // Fork AMD end
 
       m_submitContainsInjectRtx = true;
       m_cachedReflexFrameId = cachedReflexFrameId;

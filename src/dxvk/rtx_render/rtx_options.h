@@ -72,7 +72,10 @@ namespace dxvk {
     DLSS,
     NIS,
     TAAU,
-    XeSS
+    XeSS,
+    // Fork AMD start: FSR 3 upscaling
+    FSR
+    // Fork AMD end
   };
 
   enum class RaytraceModePreset {
@@ -112,6 +115,16 @@ namespace dxvk {
     Quality,
     Fullscreen
   };
+
+  // Fork AMD start: presets FSR 3 (échelles natives AMD)
+  enum class FsrPreset : int {
+    UltraPerformance = 0,
+    Performance,
+    Balanced,
+    Quality,
+    UltraQuality
+  };
+  // Fork AMD end
 
   enum class CameraAnimationMode : int {
     CameraShake_LeftRight = 0,
@@ -327,6 +340,12 @@ namespace dxvk {
                     args.flags = RtxOptionFlags::UserSetting);
     RTX_OPTION_ARGS("rtx", TaauPreset, taauPreset, TaauPreset::Balanced,  "Adjusts TAA-U scaling factor, trades quality for performance.",
                     args.flags = RtxOptionFlags::UserSetting);
+    // Fork AMD start: FSR 3 + Anti-Lag
+    RTX_OPTION_ARGS("rtx", FsrPreset, fsrPreset, FsrPreset::Balanced, "Adjusts FSR 3 scaling factor, trades quality for performance.",
+                    args.flags = RtxOptionFlags::UserSetting);
+    RTX_OPTION("rtx", bool, amdAntiLagEnable, false, "Enables AMD Anti-Lag (VK_AMD_anti_lag) to reduce input latency on Radeon GPUs. Requires a recent AMD driver.",
+                    args.flags = RtxOptionFlags::UserSetting);
+    // Fork AMD end
     static void graphicsPresetOnChange(DxvkDevice* device);
     RTX_OPTION_ARGS("rtx", GraphicsPreset, graphicsPreset, GraphicsPreset::Auto, "Overall rendering preset, higher presets result in higher image quality, lower presets result in better performance.",
                     args.environment = "DXVK_GRAPHICS_PRESET_TYPE",

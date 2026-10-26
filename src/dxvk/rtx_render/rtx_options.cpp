@@ -272,6 +272,24 @@ namespace dxvk {
         }
         break;
       }
+      // Fork AMD start: preset FSR 3 depuis l'échelle de résolution
+      // (échelles natives FSR : UltraPerf 0.33, Perf 0.50, Balanced 0.58, Quality 0.67, UltraQuality 0.77)
+      case UpscalerType::FSR: {
+        const float fsrResolutionScale = resolutionScale();
+        if (fsrResolutionScale <= 0.33f) {
+          RtxOptions::fsrPreset.setDeferred(FsrPreset::UltraPerformance);
+        } else if (fsrResolutionScale <= 0.50f) {
+          RtxOptions::fsrPreset.setDeferred(FsrPreset::Performance);
+        } else if (fsrResolutionScale <= 0.58f) {
+          RtxOptions::fsrPreset.setDeferred(FsrPreset::Balanced);
+        } else if (fsrResolutionScale <= 0.67f) {
+          RtxOptions::fsrPreset.setDeferred(FsrPreset::Quality);
+        } else {
+          RtxOptions::fsrPreset.setDeferred(FsrPreset::UltraQuality);
+        }
+        break;
+      }
+      // Fork AMD end
       default:
         break;
     }
