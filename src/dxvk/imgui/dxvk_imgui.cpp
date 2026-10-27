@@ -457,6 +457,7 @@ namespace dxvk {
       { RtxFramePassStage::DLSSNR, "DLSSNR" },
       { RtxFramePassStage::NIS, "NIS" },
       { RtxFramePassStage::XeSS, "XeSS" },
+      { RtxFramePassStage::FSR, "FSR" }, // Fork AMD
       { RtxFramePassStage::TAA, "TAA" },
       { RtxFramePassStage::DustParticles, "DustParticles" },
       { RtxFramePassStage::Bloom, "Bloom" },

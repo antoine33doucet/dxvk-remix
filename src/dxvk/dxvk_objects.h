@@ -86,6 +86,7 @@ namespace dxvk {
   class RtxTextureManager;
   class NeuralRadianceCache;
   class DxvkXeSS;
+  class DxvkFsr; // Fork AMD: FSR 3 upscaler
   class SpatiallyHashedRadianceCache;
   class SparseRendering;
 
@@ -244,6 +245,12 @@ namespace dxvk {
     DxvkXeSS& metaXeSS() {
       return m_xess.get();
     }
+
+    // Fork AMD start: FSR 3 upscaler
+    DxvkFsr& metaFsr() {
+      return m_fsr.get();
+    }
+    // Fork AMD end
 
     CompositePass& metaComposite() {
       return m_composite.get();
@@ -407,6 +414,7 @@ namespace dxvk {
     Active<DxvkNIS>                         m_nis;
     Active<DxvkTemporalAA>                  m_taa;
     Active<DxvkXeSS>                        m_xess;
+    Active<DxvkFsr>                         m_fsr; // Fork AMD: FSR 3 upscaler
     Active<CompositePass>                   m_composite;
     Active<GpuCrashPass>                    m_gpuCrash;
     Active<DebugView>                       m_debug_view;

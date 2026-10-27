@@ -345,6 +345,8 @@ namespace dxvk {
                     args.flags = RtxOptionFlags::UserSetting);
     RTX_OPTION_ARGS("rtx", bool, amdAntiLagEnable, false, "Enables AMD Anti-Lag (VK_AMD_anti_lag) to reduce input latency on Radeon GPUs. Requires a recent AMD driver.",
                     args.flags = RtxOptionFlags::UserSetting);
+    RTX_OPTION("rtx.fsr", bool, rcasSharpening, true, "Enables the FSR RCAS sharpening pass (fork AMD).");
+    RTX_OPTION("rtx.fsr", float, rcasSharpness, 0.4f, "FSR RCAS sharpening strength, from 0 (off) to 1 (maximum) (fork AMD).");
     // Fork AMD end
     static void graphicsPresetOnChange(DxvkDevice* device);
     RTX_OPTION_ARGS("rtx", GraphicsPreset, graphicsPreset, GraphicsPreset::Auto, "Overall rendering preset, higher presets result in higher image quality, lower presets result in better performance.",
@@ -1487,6 +1489,9 @@ namespace dxvk {
     static bool isNISEnabled() { return upscalerType() == UpscalerType::NIS; }
     static bool isTAAEnabled() { return upscalerType() == UpscalerType::TAAU; }
     static bool isXeSSEnabled() { return upscalerType() == UpscalerType::XeSS; }
+    // Fork AMD start: FSR 3
+    static bool isFSREnabled() { return upscalerType() == UpscalerType::FSR; }
+    // Fork AMD end
     
     static float getUniqueObjectDistanceSqr() { return uniqueObjectDistance() * uniqueObjectDistance(); }
     static uint32_t getNumFramesToPutLightsToSleep() { return numFramesToKeepLights() /2; }

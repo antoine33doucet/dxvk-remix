@@ -1,96 +1,84 @@
+/*
+* Fork AMD: FSR 3 upscaler — en-tete.
+*
+* Integration FSR 3.1 Upscale via l'API FFX (amd_fidelityfx_vk.dll, FidelityFX
+* SDK 1.1.x, MIT) chargee dynamiquement au cote de d3d9.dll.
+* Modele d'integration : DxvkXeSS (rtx_xess.h).
+*
+* SPDX license des headers vendores : MIT (AMD) — voir
+* src/dxvk/fsr/inc/ffx_api/ffx_api.h.
+*/
 #pragma once
-
-// Fork AMD start: integrale FSR 3.1 (upscaling) dans dxvk-remix
-// ---------------------------------------------------------------------------
-// Modele architectural : rtx_xess.h / rtx_xess.cpp (DxvkXeSS), car XeSS est
-// lui aussi un upscaler tiers vendor-neutral embarque dans le runtime.
-//
-// DEPENDANCE : FidelityFX SDK (AMD, MIT) >= 1.1
-//   https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
-//   Headers requis : FidelityFX/host/ffx_fsr3.h, ffx_types.h, ffx_vk.h
-//   Les shaders FSR precompiles sont fournis par le SDK (repertoire shaders/).
-//
-// ETAT : squelette d'integration complet a valider sous Windows/MSVC.
-// Les zones marquees [TODO-FORK] exigent un passage de compilation + tests.
-// ---------------------------------------------------------------------------
 
 #include "rtx_resources.h"
 #include "rtx_options.h"
 #include "rtx_common_object.h"
+
 #include "../dxvk_format.h"
 #include "../dxvk_include.h"
 #include "../util/rc/util_rc.h"
 #include "../util/rc/util_rc_ptr.h"
 
-#include <FidelityFX/host/ffx_fsr3.h>
-#include <FidelityFX/host/ffx_interface.h>
-
 namespace dxvk {
 
   class DxvkDevice;
-  class DxvkContext;
 
+  /**
+   * \brief FSR 3 upscaler (fork AMD)
+   *
+   * Upscaler FSR 3.1 branche sur le pipeline Remix a la place de DLSS/XeSS
+   * quand rtx.upscalerType = 5 (UpscalerType::FSR).
+   * Necessite amd_fidelityfx_vk.dll posee a cote de d3d9.dll (remix-sdk).
+   */
   class DxvkFsr : public RtxPass, public CommonDeviceObject {
+
   public:
-    struct FsrOptions {
-      friend class DxvkFsr;
-      friend class ImGUI;
-      // Le preset expose est RtxOptions::fsrPreset (cle rtx.fsrPreset),
-      // declare dans rtx_options.h — voir la pour les valeurs.
-    };
 
+    // Constructor with device
     DxvkFsr(DxvkDevice* device);
-    virtual ~DxvkFsr();
 
-    void setup(
-      const VkExtent2D&            renderSize,
-      const VkExtent2D&            outputSize,
-      VkFormat                     colorFormat,
-      VkFormat                     outputFormat,
-      uint32_t                     frameCount);
+    ~DxvkFsr();
 
     void dispatch(
-      Rc<DxvkContext>              ctx,
-      const Rc<DxvkImage>&         colorTarget,
-      const Rc<DxvkImage>&         depthTarget,
-      const Rc<DxvkImage>&         motionVectors,
-      const Rc<DxvkImage>&         exposureTarget,
-      const Rc<DxvkImage>&         outputTarget,
-      const Vector2i&              renderSize,
-      const Vector2i&              outputSize,
-      float                        cameraNear,
-      float                        cameraFar,
-      bool                         resetHistory);
+      Rc<DxvkContext> renderContext,
+      DxvkBarrierSet& barriers,
+      const Resources::RaytracingOutput& rtOutput,
+      bool resetHistory);
 
-    // Jitter FSR (sequence propre a FSR, cf. ffxFsr3UpscaleGetJitterOffset)
-    static Vector2f getJitterOffset(int32_t renderIndex, float jitterPhaseCount);
+    // Calcule la taille de rendu optimale pour le preset FSR courant
+    // (appele depuis RtxContext::setDownscaleExtent, comme XeSS::setSetting).
+    void setSetting(const uint32_t displaySize[2], const FsrPreset preset, uint32_t outRenderSize[2]);
 
-    void destroy();
+    void getInputSize(uint32_t& width, uint32_t& height) const;
 
-    inline bool isInitialized() const { return m_initialized; }
+    // True si amd_fidelityfx_vk.dll a pu etre chargee (une tentative par process).
+    static bool isLibraryAvailable();
+
+  protected:
+
+    // RtxPass interface
+    virtual bool isEnabled() const override;
+    virtual bool onActivation(Rc<DxvkContext>& ctx) override;
+    virtual void onDeactivation() override;
 
   private:
-    bool createBackend();
-    bool createUpscaleContext(
-      const VkExtent2D&            renderSize,
-      const VkExtent2D&            outputSize,
-      VkFormat                     colorFormat,
-      VkFormat                     outputFormat);
 
-    bool                          m_initialized = false;
-    bool                          m_deviceSupportsFP16 = true;
+    // Chargement dynamique de amd_fidelityfx_vk.dll (une seule fois par process)
+    static bool loadLibrary();
 
-    // Scratch memory pour le backend VK de FSR (allocation de FfxInterface)
-    // [TODO-FORK] : allouer via l'allocateur dxvk, cf. backendInterface.getInterfaceDesc
-    char                          m_scratchMemory[1024 * 1024];
+    void initialize(Rc<DxvkContext> renderContext, const VkExtent3D& targetExtent);
+    void createFsrContext(const VkExtent3D& targetExtent);
+    void destroyFsrContext();
 
-    FfxInterface                  m_backendInterface = {};
-    FfxFsr3UpscaleContext         m_fsrContext = {};
-    bool                          m_fsrContextCreated = false;
+    bool m_initialized;
+    bool m_recreate;
+    bool m_useExposureTexture;
 
-    FsrOptions                    m_options;
+    void* m_ffxContext; // ffxContext (API FFX)
+
+    VkExtent2D m_inputSize;
+    VkExtent2D m_fsrOutputSize;
+    FsrPreset m_actualPreset;
   };
 
-} // namespace dxvk
-
-// Fork AMD end
+}

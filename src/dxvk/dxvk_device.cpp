@@ -559,6 +559,7 @@ namespace dxvk {
     m_nis(device),
     m_taa(device),
     m_xess(device),
+    m_fsr(device), // Fork AMD: FSR 3 upscaler
     m_composite(device),
     m_gpuCrash(device),
     m_debug_view(device),

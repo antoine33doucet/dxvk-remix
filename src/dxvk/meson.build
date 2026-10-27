@@ -364,6 +364,8 @@ dxvk_src = files([
   'rtx_render/rtx_utils.h',
   'rtx_render/rtx_xess.cpp',
   'rtx_render/rtx_xess.h',
+  'rtx_render/rtx_fsr.cpp',
+  'rtx_render/rtx_fsr.h',
 
   'rtx_render/rtx_system_info.cpp',
   'rtx_render/rtx_system_info.h',
@@ -517,13 +519,13 @@ if enable_rtxio
 endif
 
 if not dxvk_is_msvc
-	ws2_32_dep = declare_dependency(
-		dependencies : [ lib_ws2_32])
-	dxvk_deps += ws2_32_dep
+        ws2_32_dep = declare_dependency(
+                dependencies : [ lib_ws2_32])
+        dxvk_deps += ws2_32_dep
 endif
 
 delayimp_dep = declare_dependency(
-	dependencies : [ lib_delayimp])
+        dependencies : [ lib_delayimp])
 dxvk_deps += delayimp_dep
 
 dxvk_lib = static_library('dxvk', dxvk_src, dxvk_version, [generated_dxvk_shaders, rtx_shaders, dxvk_generated_embedded_files],

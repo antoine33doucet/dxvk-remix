@@ -171,6 +171,7 @@ namespace dxvk {
       TAAU,
       XeSS,
       DLSS_RR,
+      FSR, // Fork AMD: FSR 3 upscaler
     };
 
     void reportCpuSimdSupport();
@@ -198,6 +199,7 @@ namespace dxvk {
     void dispatchReplaceCompositeWithDebugView(const Resources::RaytracingOutput& rtOutput);
     void dispatchNIS(const Resources::RaytracingOutput& rtOutput);
     void dispatchXeSS(const Resources::RaytracingOutput& rtOutput);
+    void dispatchFSR(const Resources::RaytracingOutput& rtOutput); // Fork AMD: FSR 3
     void dispatchTemporalAA(const Resources::RaytracingOutput& rtOutput);
     bool dispatchDlssNR(const Resources::RaytracingOutput& rtOutput);
     void dispatchToneMapping(const Resources::RaytracingOutput& rtOutput, bool updateAutoExposure = true);
@@ -244,7 +246,8 @@ namespace dxvk {
     bool shouldUseNIS() const;
     bool shouldUseTAA() const;
     bool shouldUseXeSS() const;
-    bool shouldUseUpscaler() const { return shouldUseDLSS() || shouldUseNIS() || shouldUseTAA() || shouldUseXeSS(); }
+    bool shouldUseFSR() const; // Fork AMD: FSR 3
+    bool shouldUseUpscaler() const { return shouldUseDLSS() || shouldUseNIS() || shouldUseTAA() || shouldUseXeSS() || shouldUseFSR(); }
 
     inline static bool s_triggerScreenshot = false;
     inline static bool s_triggerUsdCapture = false;

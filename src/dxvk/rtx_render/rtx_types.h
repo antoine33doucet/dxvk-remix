@@ -1067,6 +1067,7 @@ enum class RtxFramePassStage {
   DLSSNR,
   NIS,
   XeSS,
+  FSR, // Fork AMD: FSR 3 upscaler
   TAA,
   DustParticles,
   Bloom,

@@ -39,6 +39,9 @@
 #include "rtx_spatially_hashed_radiance_cache.h"
 #include "rtx_ray_reconstruction.h"
 #include "rtx_xess.h"
+// Fork AMD start: FSR 3 upscaler
+#include "rtx_fsr.h"
+// Fork AMD end
 #include "rtx_rtxdi_rayquery.h"
 #include "rtx_restir_gi_rayquery.h"
 #include "rtx_composite.h"
@@ -273,6 +276,16 @@ namespace dxvk {
         uint32_t recommendedJitterLength = xess.calcRecommendedJitterSequenceLength();
         uint32_t currentJitterLength = RtxOptions::cameraJitterSequenceLength();
       }
+    } else if (shouldUseFSR()) {
+      // Fork AMD start: FSR 3
+      DxvkFsr& fsr = m_common->metaFsr();
+      uint32_t displaySize[2] = { upscaleExtent.width, upscaleExtent.height };
+      uint32_t renderSize[2];
+      fsr.setSetting(displaySize, RtxOptions::fsrPreset(), renderSize);
+      downscaleExtent.width = renderSize[0];
+      downscaleExtent.height = renderSize[1];
+      downscaleExtent.depth = 1;
+      // Fork AMD end
     } else if (shouldUseNIS() || shouldUseTAA()) {
       auto resolutionScale = RtxOptions::resolutionScale();
       downscaleExtent.width = uint32_t(std::roundf(upscaleExtent.width * resolutionScale));
@@ -333,6 +346,9 @@ namespace dxvk {
       return InternalUpscaler::DLSS_RR;
     } else if (shouldUseXeSS() && m_common->metaXeSS().isActive()) {
       return InternalUpscaler::XeSS;
+    } else if (shouldUseFSR() && m_common->metaFsr().isActive()) {
+      // Fork AMD: FSR 3
+      return InternalUpscaler::FSR;
     } else if (shouldUseNIS()) {
       return InternalUpscaler::NIS;
     } else if (shouldUseTAA()) {
@@ -570,11 +586,10 @@ namespace dxvk {
       RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
     }
 
-    // Fork AMD start: FSR 3 — upscaler FSR pas encore câblé dans ce build
-    // (rtx_fsr.cpp hors build meson), repli automatique sur TAA-U pour un rendu correct.
-    // TODO-FORK: retirer ce bloc quand le dispatch FSR sera intégré (pass UpscalerType::FSR).
-    if (RtxOptions::upscalerType() == UpscalerType::FSR) {
-      ONCE(Logger::info("[RTX-Compatibility-Info] FSR upscaler not wired in this build yet, falling back to TAA-U."));
+    // Fork AMD start: FSR 3 — l'upscaler est desormais cable (rtx_fsr.cpp / API FFX).
+    // Repli sur TAA-U uniquement si amd_fidelityfx_vk.dll est absente.
+    if (RtxOptions::upscalerType() == UpscalerType::FSR && !DxvkFsr::isLibraryAvailable()) {
+      ONCE(Logger::info("[RTX-Compatibility-Info] amd_fidelityfx_vk.dll not found next to d3d9.dll, FSR falling back to TAA-U."));
       RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
     }
     // Fork AMD end
@@ -783,6 +798,10 @@ namespace dxvk {
         } else if (m_currentUpscaler == InternalUpscaler::XeSS) {
           m_common->metaAutoExposure().createResources(this);
           dispatchXeSS(rtOutput);
+        } else if (m_currentUpscaler == InternalUpscaler::FSR) {
+          // Fork AMD: FSR 3
+          m_common->metaAutoExposure().createResources(this);
+          dispatchFSR(rtOutput);
         } else if (m_currentUpscaler == InternalUpscaler::NIS) {
           dispatchNIS(rtOutput);
         } else if (m_currentUpscaler == InternalUpscaler::TAAU){
@@ -1894,6 +1913,15 @@ namespace dxvk {
     xess.dispatch(this, m_execBarriers, rtOutput, m_resetHistory);
   }
 
+  // Fork AMD start: FSR 3
+  void RtxContext::dispatchFSR(const Resources::RaytracingOutput& rtOutput) {
+    ScopedGpuProfileZone(this, "FSR");
+    setFramePassStage(RtxFramePassStage::FSR);
+    DxvkFsr& fsr = m_common->metaFsr();
+    fsr.dispatch(this, m_execBarriers, rtOutput, m_resetHistory);
+  }
+  // Fork AMD end
+
   void RtxContext::dispatchTemporalAA(const Resources::RaytracingOutput& rtOutput) {
     ScopedGpuProfileZone(this, "TAA");
     setFramePassStage(RtxFramePassStage::TAA);
@@ -2488,6 +2516,12 @@ namespace dxvk {
   bool RtxContext::shouldUseXeSS() const {
     return RtxOptions::upscalerType() == UpscalerType::XeSS;
   }
+
+  // Fork AMD start: FSR 3
+  bool RtxContext::shouldUseFSR() const {
+    return RtxOptions::upscalerType() == UpscalerType::FSR;
+  }
+  // Fork AMD end
 
   D3D9RtxVertexCaptureData& RtxContext::allocAndMapVertexCaptureConstantBuffer() {
     DxvkBufferSliceHandle slice = m_rtState.vertexCaptureCB->allocSlice();
