@@ -656,19 +656,29 @@ namespace dxvk {
       // Fork AMD start: AMD Anti-Lag (VK_AMD_anti_lag)
       // Envoie le marqueur de début de frame au driver Radeon si l'option
       // rtx.amdAntiLagEnable est activée (ex: rtx.conf ou l'UI Remix).
+      // API réelle (Vulkan-Headers 1.4.309): vkAntiLagUpdateAMD, device-level.
       // Inerte sur GPU NVIDIA / pilotes sans l'extension.
+      // TODO-FORK #2: activer VkPhysicalDeviceAntiLagFeaturesAMD a la creation
+      // du device et ajouter le marqueur PRESENT cote presentation.
       if (RtxOptions::amdAntiLagEnable() && m_device->extensions().extAntiLagAmd) {
-        static PFN_vkCmdSetAntiLagDataAMD s_vkCmdSetAntiLagDataAMD = nullptr;
-        if (!s_vkCmdSetAntiLagDataAMD) {
-          s_vkCmdSetAntiLagDataAMD = reinterpret_cast<PFN_vkCmdSetAntiLagDataAMD>(
-            m_device->vkd()->sym("vkCmdSetAntiLagDataAMD"));
+        static PFN_vkAntiLagUpdateAMD s_vkAntiLagUpdateAMD = nullptr;
+        if (!s_vkAntiLagUpdateAMD) {
+          s_vkAntiLagUpdateAMD = reinterpret_cast<PFN_vkAntiLagUpdateAMD>(
+            m_device->vkd()->sym("vkAntiLagUpdateAMD"));
         }
-        if (s_vkCmdSetAntiLagDataAMD) {
+        if (s_vkAntiLagUpdateAMD) {
+          VkAntiLagPresentationInfoAMD presentationInfo {};
+          presentationInfo.sType = VK_STRUCTURE_TYPE_ANTI_LAG_PRESENTATION_INFO_AMD;
+          presentationInfo.stage = VK_ANTI_LAG_STAGE_INPUT_AMD;
+          presentationInfo.frameIndex = cachedReflexFrameId;
+
           VkAntiLagDataAMD antiLagData {};
           antiLagData.sType = VK_STRUCTURE_TYPE_ANTI_LAG_DATA_AMD;
           antiLagData.mode = VK_ANTI_LAG_MODE_ON_AMD;
-          antiLagData.inFrameMarker = VK_TRUE; // marqueur entrée de frame
-          s_vkCmdSetAntiLagDataAMD(getCmdBuffer(DxvkCmdBuffer::ExecBuffer), &antiLagData);
+          antiLagData.maxFPS = 0; // 0 = pas de limite de FPS
+          antiLagData.pPresentationInfo = &presentationInfo;
+
+          s_vkAntiLagUpdateAMD(m_device->vkd()->device(), &antiLagData);
         }
       }
       // Fork AMD end
