@@ -500,7 +500,7 @@ namespace dxvk {
     desc.viewSpaceToMetersFactor = 1.0f;
     desc.flags = 0;
 
-    const uint32_t ret = s_ffx.Dispatch(m_ffxContext, &desc.header);
+    const uint32_t ret = s_ffx.Dispatch(&m_ffxContext, &desc.header);
     if (ret != FFX_API_RETURN_OK) {
       Logger::warn(str::format("FSR: echec du dispatch (code ", ret, ")"));
       copyFallback();
