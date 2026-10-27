@@ -224,6 +224,32 @@ namespace dxvk {
     }
   }
 
+  // Fork AMD start: preset FSR 3 -> échelle de résolution (échelles natives AMD :
+  // UltraPerf 0.33, Perf 0.50, Balanced 0.58, Quality 0.67, UltraQuality 0.77)
+  void RtxOptions::updateUpscalerFromFsrPreset() {
+    // Code-driven changes for FSR preset (automatically routes to User layer when preset is Custom)
+    RtxOptionLayerTarget layerTarget(RtxOptionEditTarget::Derived);
+
+    switch (fsrPreset()) {
+    case FsrPreset::UltraPerformance:
+      resolutionScale.setDeferred(0.33f);
+      break;
+    case FsrPreset::Performance:
+      resolutionScale.setDeferred(0.5f);
+      break;
+    case FsrPreset::Balanced:
+      resolutionScale.setDeferred(0.58f);
+      break;
+    case FsrPreset::Quality:
+      resolutionScale.setDeferred(0.67f);
+      break;
+    case FsrPreset::UltraQuality:
+      resolutionScale.setDeferred(0.77f);
+      break;
+    }
+  }
+  // Fork AMD end
+
   void RtxOptions::updatePresetFromUpscaler() {
     // Code-driven changes for upscaler preset (automatically routes to User layer when preset is Custom)
     RtxOptionLayerTarget layerTarget(RtxOptionEditTarget::Derived);

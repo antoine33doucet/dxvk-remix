@@ -1,0 +1,145 @@
+diff --git a/src/dxvk/imgui/dxvk_imgui.cpp b/src/dxvk/imgui/dxvk_imgui.cpp
+index 29fd086..217c6ce 100644
+--- a/src/dxvk/imgui/dxvk_imgui.cpp
++++ b/src/dxvk/imgui/dxvk_imgui.cpp
+@@ -296,6 +296,7 @@ namespace dxvk {
+       {UpscalerType::NIS, "NIS"},
+       {UpscalerType::TAAU, "TAA-U"},
+       {UpscalerType::XeSS, "XeSS"},
++      {UpscalerType::FSR, "FSR 3"},
+   } });
+ 
+   static auto upscalerDLSSCombo = RemixGui::ComboWithKey<UpscalerType>(
+@@ -306,6 +307,7 @@ namespace dxvk {
+       {UpscalerType::NIS, "NIS"},
+       {UpscalerType::TAAU, "TAA-U"},
+       {UpscalerType::XeSS, "XeSS"},
++      {UpscalerType::FSR, "FSR 3"},
+   } });
+ 
+   RemixGui::ComboWithKey<DLSSProfile> dlssProfileCombo{
+@@ -3895,6 +3897,10 @@ namespace dxvk {
+           ImGui::TextWrapped(str::format("Render Resolution: ", inputWidth, "x", inputHeight).c_str());
+         } else if (RtxOptions::upscalerType() == UpscalerType::TAAU) {
+         RemixGui::SliderFloat("Resolution scale", &RtxOptions::resolutionScaleObject(), 0.5f, 1.0f);
++      // Fork AMD start: FSR 3 (échelle pilotée par le preset FSR)
++      } else if (RtxOptions::upscalerType() == UpscalerType::FSR) {
++        RemixGui::SliderFloat("Resolution scale", &RtxOptions::resolutionScaleObject(), 0.33f, 1.0f);
++      // Fork AMD end
+       }
+ 
+       RemixGui::Separator();
+diff --git a/src/dxvk/imgui/rtx_user_menu.cpp b/src/dxvk/imgui/rtx_user_menu.cpp
+index b054509..d60c429 100644
+--- a/src/dxvk/imgui/rtx_user_menu.cpp
++++ b/src/dxvk/imgui/rtx_user_menu.cpp
+@@ -86,6 +86,19 @@ namespace dxvk {
+     } }
+   };
+ 
++  // Fork AMD start: preset FSR 3 (échelles natives AMD)
++  static RemixGui::ComboWithKey<FsrPreset> fsrPresetCombo{
++    "FSR Preset",
++    RemixGui::ComboWithKey<FsrPreset>::ComboEntries{ {
++        {FsrPreset::UltraPerformance, "Ultra Performance"},
++        {FsrPreset::Performance, "Performance"},
++        {FsrPreset::Balanced, "Balanced"},
++        {FsrPreset::Quality, "Quality"},
++        {FsrPreset::UltraQuality, "Ultra Quality"},
++    } }
++  };
++  // Fork AMD end
++
+   static RemixGui::ComboWithKey<GraphicsPreset> graphicsPresetCombo{
+     "Graphics Preset",
+     RemixGui::ComboWithKey<GraphicsPreset>::ComboEntries{ {
+@@ -473,6 +486,20 @@ namespace dxvk {
+ 
+           break;
+         }
++        // Fork AMD start: FSR 3 (preset + échelle, cf. rtx.fsrPreset)
++        case UpscalerType::FSR: {
++          fsrPresetCombo.getKey(&RtxOptions::fsrPresetObject());
++          RtxOptions::updateUpscalerFromFsrPreset();
++
++          // Display FSR Upscaling Information
++
++          auto resolutionScale = RtxOptions::resolutionScale();
++
++          ImGui::TextWrapped(str::format("FSR Resolution Scale: ", resolutionScale).c_str());
++
++          break;
++        }
++        // Fork AMD end
+         case UpscalerType::None: {
+           // No custom UI here.
+           break;
+diff --git a/src/dxvk/rtx_render/rtx_context.cpp b/src/dxvk/rtx_render/rtx_context.cpp
+index 4655b3e..5169082 100644
+--- a/src/dxvk/rtx_render/rtx_context.cpp
++++ b/src/dxvk/rtx_render/rtx_context.cpp
+@@ -570,6 +570,15 @@ namespace dxvk {
+       RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
+     }
+ 
++    // Fork AMD start: FSR 3 — upscaler FSR pas encore câblé dans ce build
++    // (rtx_fsr.cpp hors build meson), repli automatique sur TAA-U pour un rendu correct.
++    // TODO-FORK: retirer ce bloc quand le dispatch FSR sera intégré (pass UpscalerType::FSR).
++    if (RtxOptions::upscalerType() == UpscalerType::FSR) {
++      ONCE(Logger::info("[RTX-Compatibility-Info] FSR upscaler not wired in this build yet, falling back to TAA-U."));
++      RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
++    }
++    // Fork AMD end
++
+     if (DxvkDLFG::enable() && !common->metaDLFG().supportsDLFG()) {
+       DxvkDLFG::enable.setDeferred(false);
+     }
+diff --git a/src/dxvk/rtx_render/rtx_options.cpp b/src/dxvk/rtx_render/rtx_options.cpp
+index 0b14ecb..15759ec 100644
+--- a/src/dxvk/rtx_render/rtx_options.cpp
++++ b/src/dxvk/rtx_render/rtx_options.cpp
+@@ -224,6 +224,32 @@ namespace dxvk {
+     }
+   }
+ 
++  // Fork AMD start: preset FSR 3 -> échelle de résolution (échelles natives AMD :
++  // UltraPerf 0.33, Perf 0.50, Balanced 0.58, Quality 0.67, UltraQuality 0.77)
++  void RtxOptions::updateUpscalerFromFsrPreset() {
++    // Code-driven changes for FSR preset (automatically routes to User layer when preset is Custom)
++    RtxOptionLayerTarget layerTarget(RtxOptionEditTarget::Derived);
++
++    switch (fsrPreset()) {
++    case FsrPreset::UltraPerformance:
++      resolutionScale.setDeferred(0.33f);
++      break;
++    case FsrPreset::Performance:
++      resolutionScale.setDeferred(0.5f);
++      break;
++    case FsrPreset::Balanced:
++      resolutionScale.setDeferred(0.58f);
++      break;
++    case FsrPreset::Quality:
++      resolutionScale.setDeferred(0.67f);
++      break;
++    case FsrPreset::UltraQuality:
++      resolutionScale.setDeferred(0.77f);
++      break;
++    }
++  }
++  // Fork AMD end
++
+   void RtxOptions::updatePresetFromUpscaler() {
+     // Code-driven changes for upscaler preset (automatically routes to User layer when preset is Custom)
+     RtxOptionLayerTarget layerTarget(RtxOptionEditTarget::Derived);
+diff --git a/src/dxvk/rtx_render/rtx_options.h b/src/dxvk/rtx_render/rtx_options.h
+index d491444..476ea48 100644
+--- a/src/dxvk/rtx_render/rtx_options.h
++++ b/src/dxvk/rtx_render/rtx_options.h
+@@ -1423,6 +1423,7 @@ namespace dxvk {
+     static void updateUpscalerFromNisPreset();
+     static void updateUpscalerFromTaauPreset();
+     static void updateUpscalerFromXeSSPreset();
++    static void updateUpscalerFromFsrPreset(); // Fork AMD: preset FSR 3 -> resolutionScale
+     static void updatePresetFromUpscaler();
+     static NV_GPU_ARCHITECTURE_ID getNvidiaArch();
+     static NV_GPU_ARCH_IMPLEMENTATION_ID getNvidiaChipId();

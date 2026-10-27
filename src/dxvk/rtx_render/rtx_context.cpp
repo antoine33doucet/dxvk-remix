@@ -570,6 +570,15 @@ namespace dxvk {
       RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
     }
 
+    // Fork AMD start: FSR 3 — upscaler FSR pas encore câblé dans ce build
+    // (rtx_fsr.cpp hors build meson), repli automatique sur TAA-U pour un rendu correct.
+    // TODO-FORK: retirer ce bloc quand le dispatch FSR sera intégré (pass UpscalerType::FSR).
+    if (RtxOptions::upscalerType() == UpscalerType::FSR) {
+      ONCE(Logger::info("[RTX-Compatibility-Info] FSR upscaler not wired in this build yet, falling back to TAA-U."));
+      RtxOptions::upscalerType.setDeferred(UpscalerType::TAAU);
+    }
+    // Fork AMD end
+
     if (DxvkDLFG::enable() && !common->metaDLFG().supportsDLFG()) {
       DxvkDLFG::enable.setDeferred(false);
     }

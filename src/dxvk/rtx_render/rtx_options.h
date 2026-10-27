@@ -1423,6 +1423,7 @@ namespace dxvk {
     static void updateUpscalerFromNisPreset();
     static void updateUpscalerFromTaauPreset();
     static void updateUpscalerFromXeSSPreset();
+    static void updateUpscalerFromFsrPreset(); // Fork AMD: preset FSR 3 -> resolutionScale
     static void updatePresetFromUpscaler();
     static NV_GPU_ARCHITECTURE_ID getNvidiaArch();
     static NV_GPU_ARCH_IMPLEMENTATION_ID getNvidiaChipId();

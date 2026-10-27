@@ -86,6 +86,19 @@ namespace dxvk {
     } }
   };
 
+  // Fork AMD start: preset FSR 3 (échelles natives AMD)
+  static RemixGui::ComboWithKey<FsrPreset> fsrPresetCombo{
+    "FSR Preset",
+    RemixGui::ComboWithKey<FsrPreset>::ComboEntries{ {
+        {FsrPreset::UltraPerformance, "Ultra Performance"},
+        {FsrPreset::Performance, "Performance"},
+        {FsrPreset::Balanced, "Balanced"},
+        {FsrPreset::Quality, "Quality"},
+        {FsrPreset::UltraQuality, "Ultra Quality"},
+    } }
+  };
+  // Fork AMD end
+
   static RemixGui::ComboWithKey<GraphicsPreset> graphicsPresetCombo{
     "Graphics Preset",
     RemixGui::ComboWithKey<GraphicsPreset>::ComboEntries{ {
@@ -473,6 +486,20 @@ namespace dxvk {
 
           break;
         }
+        // Fork AMD start: FSR 3 (preset + échelle, cf. rtx.fsrPreset)
+        case UpscalerType::FSR: {
+          fsrPresetCombo.getKey(&RtxOptions::fsrPresetObject());
+          RtxOptions::updateUpscalerFromFsrPreset();
+
+          // Display FSR Upscaling Information
+
+          auto resolutionScale = RtxOptions::resolutionScale();
+
+          ImGui::TextWrapped(str::format("FSR Resolution Scale: ", resolutionScale).c_str());
+
+          break;
+        }
+        // Fork AMD end
         case UpscalerType::None: {
           // No custom UI here.
           break;

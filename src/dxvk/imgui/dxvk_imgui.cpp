@@ -296,6 +296,7 @@ namespace dxvk {
       {UpscalerType::NIS, "NIS"},
       {UpscalerType::TAAU, "TAA-U"},
       {UpscalerType::XeSS, "XeSS"},
+      {UpscalerType::FSR, "FSR 3"},
   } });
 
   static auto upscalerDLSSCombo = RemixGui::ComboWithKey<UpscalerType>(
@@ -306,6 +307,7 @@ namespace dxvk {
       {UpscalerType::NIS, "NIS"},
       {UpscalerType::TAAU, "TAA-U"},
       {UpscalerType::XeSS, "XeSS"},
+      {UpscalerType::FSR, "FSR 3"},
   } });
 
   RemixGui::ComboWithKey<DLSSProfile> dlssProfileCombo{
@@ -3895,6 +3897,10 @@ namespace dxvk {
           ImGui::TextWrapped(str::format("Render Resolution: ", inputWidth, "x", inputHeight).c_str());
         } else if (RtxOptions::upscalerType() == UpscalerType::TAAU) {
         RemixGui::SliderFloat("Resolution scale", &RtxOptions::resolutionScaleObject(), 0.5f, 1.0f);
+      // Fork AMD start: FSR 3 (échelle pilotée par le preset FSR)
+      } else if (RtxOptions::upscalerType() == UpscalerType::FSR) {
+        RemixGui::SliderFloat("Resolution scale", &RtxOptions::resolutionScaleObject(), 0.33f, 1.0f);
+      // Fork AMD end
       }
 
       RemixGui::Separator();
