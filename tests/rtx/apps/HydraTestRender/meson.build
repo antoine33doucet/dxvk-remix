@@ -117,6 +117,7 @@ hdremix_test_exe = executable(
   hdremix_test_exe_src,
   include_directories: hdremix_includes,
   cpp_args: hdremix_defines + hdremix_compilerflags,
+  link_args: ['/ignore:4099', '/ignore:4098'],
   dependencies: hdremix_linklibs + hdremix_dxvksdkbuilt + usd_plugin_deps + lib_glfw3,
   override_options: ['cpp_std=c++17'],
   install: true,
